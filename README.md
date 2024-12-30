@@ -52,6 +52,24 @@ This will spin up the Django application and Redis server.
 
 ## Usage
 
+### REST API
+
+- **`/save_quotes/`**
+  - **Method:** `POST`
+  - **Description:** Saves quote data from the WebSocket.
+  - **Payload Example:**
+    ```json
+    {
+      "api_url": "wss://example.com/OnQuote?id=123"
+    }
+    ```
+  - **Response Example:**
+    ```json
+    {
+      "message": "Started consuming quotes"
+    }
+    ```
+
 ### WebSocket Endpoint
 
 To connect to the WebSocket API, use the endpoint:
