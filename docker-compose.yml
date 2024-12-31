@@ -12,6 +12,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RUN_MIGRATE=True
     depends_on:
       - redis
     ports:
