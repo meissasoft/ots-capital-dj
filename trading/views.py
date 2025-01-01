@@ -7,8 +7,8 @@ from drf_yasg.utils import swagger_auto_schema
 from .serializers import SaveQuotesSerializer
 
 
-def start_websocket_client(ws_url):
-    async_to_sync(consume_quotes)(ws_url)
+def start_websocket_client(ws_url, timeframe):
+    async_to_sync(consume_quotes)(ws_url, timeframe)
 
 
 class SaveQuotes(APIView):
@@ -18,10 +18,11 @@ class SaveQuotes(APIView):
     )
     def post(self, request):
         api_url = request.data.get("api_url")
+        timeframe = request.data.get("timeframe")
         ws_url = format_websocket_url(api_url)
         if ws_url:
             try:
-                thread = Thread(target=start_websocket_client, args=(ws_url,))
+                thread = Thread(target=start_websocket_client, args=(ws_url, timeframe))
                 thread.start()
                 return Response({"message": "Started consuming quotes"}, status=200)
             except Exception as e:

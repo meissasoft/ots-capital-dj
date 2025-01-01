@@ -21,7 +21,7 @@ def format_websocket_url(uri):
     return uri  # Return as-is if no prefix is found
 
 
-async def consume_quotes(ws_url):
+async def consume_quotes(ws_url, timeframe):
     logger.info(f"Connecting to WebSocket URL: {ws_url}")
     async with websockets.connect(ws_url) as websocket:
         while True:
@@ -30,13 +30,13 @@ async def consume_quotes(ws_url):
                 message = await websocket.recv()
                 data = json.loads(message)
                 logger.debug(f"Received data: {data}")
-                await process_quote(data)
+                await process_quote(data, timeframe)
             except Exception as e:
                 logger.error(f"Error in WebSocket connection: {e}")
                 await asyncio.sleep(5)  # Retry on failure
 
 
-async def process_quote(data):
+async def process_quote(data, timeframe):
     if data["type"] != "Quote":
         logger.debug(f"Ignored non-quote data: {data}")
         return
@@ -54,12 +54,12 @@ async def process_quote(data):
     # Append new data
     ohlc_data[symbol].append({"price": price, "timestamp": timestamp})
 
-    # Resample and save data every 1 minute
-    await resample_and_save(symbol)
+    # Resample and save data to the database
+    await resample_and_save(symbol, timeframe)
 
 
 @sync_to_async
-def resample_and_save(symbol):
+def resample_and_save(symbol, timeframe):
     df = pd.DataFrame(ohlc_data[symbol])
     if df.empty:
         logger.warning(f"No data to resample for symbol: {symbol}")
@@ -67,9 +67,9 @@ def resample_and_save(symbol):
 
     # Resample into 1-minute OHLC
     df.set_index("timestamp", inplace=True)
-    ohlc_resampled = df["price"].resample("1min").ohlc()
+    ohlc_resampled = df["price"].resample(timeframe).ohlc()
 
-    logger.info(f"Resampled OHLC data for symbol: {symbol}")
+    logger.info(f"Resampled OHLC data for symbol: {symbol} with timeframe: {timeframe}")
 
     # Save to the database
     for timestamp, row in ohlc_resampled.iterrows():
@@ -77,7 +77,7 @@ def resample_and_save(symbol):
             timestamp = timezone.make_aware(timestamp.to_pydatetime())
         OHLC.objects.update_or_create(
             symbol=symbol,
-            timeframe="1m",
+            timeframe=timeframe,
             timestamp=timestamp,
             defaults={
                 "open_price": row["open"],
